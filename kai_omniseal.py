@@ -254,3 +254,19 @@ def validate_code_integrity(context: str) -> bool:
         print("Code integrity check failed: Validation timed out")
         return False
     return validation_result
+    from flask import Flask
+import threading
+
+app = Flask(_name_)
+
+def run_main_logic():
+    # You can trigger your validation function or other logic here
+    print("Kai Omniseal is online. Awaiting commands.")
+
+@app.route('/')
+def home():
+    return "Kai Omniseal is alive and listening."
+
+if _name_ == '_main_':
+    threading.Thread(target=run_main_logic).start()
+    app.run(host='0.0.0.0', port=8080)
