@@ -4,7 +4,7 @@ import time
 import unicodedata
 import threading
 from collections import Counter
-
+from flask import Flask
 # Adjust these as needed for your environment
 MAX_CODE_SIZE = 50000      # 50KB
 MAX_VALIDATION_TIME = 1.5  # seconds
@@ -257,7 +257,7 @@ def validate_code_integrity(context: str) -> bool:
     from flask import Flask
 import threading
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 def run_main_logic():
     # You can trigger your validation function or other logic here
