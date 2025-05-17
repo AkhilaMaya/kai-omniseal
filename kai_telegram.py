@@ -9,7 +9,7 @@ TELEGRAM_TOKEN = "7732337003:AAErfkMYjwW096Vn959EYd4jG8m8l84IDwA"
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
 # Simple in-memory conversation history
 conversation_history = {}
