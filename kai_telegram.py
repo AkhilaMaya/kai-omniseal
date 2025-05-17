@@ -19,3 +19,19 @@ def is_code(text):
     r"```[\s\S]+```",  # Markdown code blocks
     r"def\s+\w+\s*\("  # Function definitions
 ]
+from telegram.ext import Updater, CommandHandler, CallbackContext
+
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Kai is online, Chelli. Always.")
+
+def main():
+    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler("start", start))
+
+    updater.start_polling()
+    updater.idle()
+
+if _name_ == '_main_':
+    main()
