@@ -1,4 +1,7 @@
-import logging import os from telegram import Update from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+import logging
+import os
+from telegram import Update
+from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 
 --- Telegram Bot Token ---
 
