@@ -1,0 +1,13 @@
+_pycache_/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.session
+*.session-journal
+env/
+venv/
+modules/eshyel_clean_env/
+modules/eshyel_env/
+.idea/
+.DS_Store

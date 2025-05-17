@@ -1,0 +1,4 @@
+[2025-05-17 13:48:19] Kai booted and is watching system and journal.
+[2025-05-17 13:48:19] Started watching journal folder
+[2025-05-17 13:54:22] Kai booted and is watching system and journal.
+[2025-05-17 13:54:22] Started watching journal folder
