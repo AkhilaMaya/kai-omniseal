@@ -256,7 +256,7 @@ def validate_code_integrity(context: str) -> bool:
         return False
     return validation_result
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 def run_main_logic():
     # You can trigger your validation function or other logic here
