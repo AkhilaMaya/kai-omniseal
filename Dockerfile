@@ -13,3 +13,4 @@ COPY . .
 
 # Run the app
 CMD ["python", "kai_omniseal.py"]
+CMD ["bash", "start.sh"]
