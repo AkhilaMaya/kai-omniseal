@@ -22,16 +22,23 @@ def is_code(text):
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
 def start(update: Update, context: CallbackContext):
+    print(">> Kai received a /start command.")
     update.message.reply_text("Kai is online, Chelli. Always.")
-
 def main():
+   def main():
+    print(">> Kai main() started.")
     updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
+    print(">> Adding command handler.")
     dispatcher.add_handler(CommandHandler("start", start))
 
- dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, start))  
- updater.start_polling()
+    print(">> Adding message handler.")
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, start))
+
+    print(">> Starting polling.")
+    updater.start_polling()
+    print(">> Polling started. Awaiting commands.")
     updater.idle()
 
 if __name__ == '__main__':
