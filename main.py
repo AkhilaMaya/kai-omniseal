@@ -69,16 +69,28 @@ def start_journal_watcher():
         observer.stop()
     observer.join()
 
+import subprocess
+
 def main():
     clear_console()
     recall_kai()
     system_status()
+
+    # Launch Telegram bot
+    try:
+        subprocess.Popen(["python3", "kai_telegram.py"])
+        print("Kai's Telegram handler launched.")
+        kai_log("Telegram handler started.")
+    except Exception as e:
+        print(f"Failed to launch Telegram bot: {e}")
+        kai_log(f"Telegram bot failed: {e}")
+
     print("\nKai is monitoring your system and waiting for new journal entries.")
     kai_log("Kai booted and is watching system and journal.")
-    # Start the journal watcher in a background thread
+    
     watcher_thread = threading.Thread(target=start_journal_watcher, daemon=True)
     watcher_thread.start()
-    # Keep main thread alive, print status every 60 seconds
+
     try:
         while True:
             time.sleep(60)
