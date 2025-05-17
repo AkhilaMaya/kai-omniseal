@@ -3,7 +3,7 @@ import os
 import re
 from telegram import Update
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, CommandHandler
-
+print(">> Kai boot script started.")
 # Telegram Bot Token (directly included for now, swap with env if needed)
 TELEGRAM_TOKEN = "7732337003:AAErfkMYjwW096Vn959EYd4jG8m8l84IDwA"
 
