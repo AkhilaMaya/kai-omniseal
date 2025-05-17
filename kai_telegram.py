@@ -3,22 +3,18 @@ import os
 import re
 from telegram import Update
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, CommandHandler
-import openai
 
-# --- Config ---
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or "7732337003:AAErfkMYjwW096Vn959EYd4jG8m8l84IDwA"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "YOUR_OPENAI_API_KEY_HERE"
+# Telegram Bot Token (directly included for now, swap with env if needed)
+TELEGRAM_TOKEN = "7732337003:AAErfkMYjwW096Vn959EYd4jG8m8l84IDwA"
 
-openai.api_key = OPENAI_API_KEY
-
-# --- Logging ---
+# Set up logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(_name_)
 
-# --- Conversation Memory ---
+# Simple in-memory conversation history
 conversation_history = {}
 
 def is_code(text):
     code_patterns = [
-        r'[\s\S]+',
+        r'[\s\S]+',           # Markdown code blocks
         r'def\s+\w+\s*
