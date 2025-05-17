@@ -16,5 +16,6 @@ conversation_history = {}
 
 def is_code(text):
  code_patterns = [
-    r'[\s\S]+?',                  # Markdown code blocks
-    r'def\s+\w+\s*
+    r"```[\s\S]+```",  # Markdown code blocks
+    r"def\s+\w+\s*\("  # Function definitions
+]
