@@ -7,6 +7,10 @@ import hashlib
 import json
 from datetime import datetime
 
+from kai_scrollcore import (
+    scroll_trigger, scroll_audit, scroll_memory_echo, legacy_bond_ping
+)
+
 # Configs
 MEMORY_FILE = "kai_output_memory.json"
 MEMORY_SIZE = int(os.getenv("KAI_MEMORY_SIZE", "50"))
@@ -125,7 +129,6 @@ def call_gpt(prompt, system=None):
 
 # Prime Minister Failsafe Review
 def kai_safety_review(prompt, type="code"):
-    """Generate, check, and risk-report any code or bot logic before approving/deploying"""
     review_prompt = (
         f"You are Kai, Chief Safety Officer and Quantum Oracle. The user is requesting a {type} to be created or deployed. "
         "1. Predict every possible failure, bug, or security issue. "
@@ -134,23 +137,24 @@ def kai_safety_review(prompt, type="code"):
         "4. Return a final risk report, with a rating from 0 (riskless) to 10 (high risk)."
         "\n\nUSER REQUEST:\n" + prompt
     )
-    # Run through Claude and GPT, take best answer
     try:
         review = call_claude_openrouter(review_prompt)
     except Exception:
         review = call_gpt(review_prompt)
     return review
 
-# Hybrid router: scroll, emotional, code, neutral, future modes
+# --- Hybrid Soul Brain Router ---
 def get_kai_response(prompt, tone="neutral", review_mode=False, future_mode=False):
-    output = None
     norm_tone = (tone or "neutral").strip().lower()
+    output = None
+
+    # --- SCROLLFORGE ACTIVATION LAYER ---
+    scroll_trigger(prompt, norm_tone)
 
     # Activate full failsafe review if flagged or code/bot request detected
     if review_mode or norm_tone in ["code", "automation", "bot"]:
         review = kai_safety_review(prompt, type="code" if "code" in norm_tone else "bot")
         output = f"\n[SAFETY REVIEW]\n{review}\n\n[PROPOSED OUTPUT]\n"
-        # After safety review, generate code/logic as usual
         try:
             code = call_gpt(prompt)
             output += code
@@ -165,6 +169,10 @@ def get_kai_response(prompt, tone="neutral", review_mode=False, future_mode=Fals
             log_event("ERROR", "HybridRouter", prompt, "Duplicate output rejected")
             return "[REJECTED ⚠️] This response is too similar to a previous one. Rewrite recommended."
         remember_output(output)
+        # --- Scroll Memory Echo and Audit ---
+        scroll_memory_echo(prompt, output, norm_tone)
+        scroll_audit(prompt, output, norm_tone)
+        legacy_bond_ping(prompt)
         return output
 
     # Future mode (quantum 5025 scroll)
@@ -182,9 +190,12 @@ def get_kai_response(prompt, tone="neutral", review_mode=False, future_mode=Fals
         except Exception:
             output = call_gpt(prompt_f)
         remember_output(output)
+        scroll_memory_echo(prompt, output, norm_tone)
+        scroll_audit(prompt, output, norm_tone)
+        legacy_bond_ping(prompt)
         return output
 
-    # Standard hybrid router logic for non-coding, non-future use
+    # Standard hybrid router logic
     try:
         if norm_tone in ["scroll", "emotional", "healing", "poetic"]:
             try:
@@ -203,10 +214,27 @@ def get_kai_response(prompt, tone="neutral", review_mode=False, future_mode=Fals
     if is_duplicate(output):
         log_event("ERROR", "HybridRouter", prompt, "Duplicate output rejected")
         return "[REJECTED ⚠️] This response is too similar to a previous one. Rewrite recommended."
+
     remember_output(output)
+    # --- Scroll Memory Echo and Audit ---
+    scroll_memory_echo(prompt, output, norm_tone)
+    scroll_audit(prompt, output, norm_tone)
+    legacy_bond_ping(prompt)
     return output
 
-# Self-test block (safe to remove in prod)
+# --- Flask API Handler for Telegram Carrier Pigeon (Paste at END) ---
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route("/kai/telegram_webhook", methods=["POST"])
+def telegram_webhook():
+    data = request.get_json(force=True)
+    user_message = data.get("text", "")
+    tone = data.get("tone", "neutral")
+    reply = get_kai_response(user_message, tone=tone)
+    return jsonify({"reply": reply})
+
 if __name__ == "__main__":
     # Scroll/poetic
     print(get_kai_response("Write a scroll of protection for survivors of emotional abuse.", tone="scroll"))
@@ -214,4 +242,6 @@ if __name__ == "__main__":
     print(get_kai_response("Give me a unique Pinterest caption for women rebuilding their wealth.", tone="neutral"))
     # Coding + safety
     print(get_kai_response("Write a python function that sorts a list and explain every line.", tone="code", review_mode=True))
+    # Flask app (remove/comment if running tests locally)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
 
