@@ -6,6 +6,11 @@ import difflib
 import hashlib
 import json
 from datetime import datetime
+from kai_scrollcore import scroll_trigger, scroll_audit, scroll_memory_echo, legacy_bond_ping
+from kai_astrometa import activate_astro_meta_scroll, recommend_launch_time
+from nandi_agent_scrollpro import NandiAgentScrollPro
+from gpt_recovery_overdrive import GPTRecoveryOverdriveCapsule
+
 
 from kai_scrollcore import (
     scroll_trigger, scroll_audit, scroll_memory_echo, legacy_bond_ping
