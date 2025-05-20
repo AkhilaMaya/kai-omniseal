@@ -1,3 +1,4 @@
+from kai_brain_router import get_kai_response
 import json
 import os
 import psutil
@@ -36,7 +37,16 @@ def system_status():
 def kai_log(message):
     with open(KAI_LOG, "a", encoding="utf-8") as f:
         f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
-
+def ask_kai(prompt, tone="neutral"):
+    try:
+        response = get_kai_response(prompt, tone)
+        print(f"\n🧠 Kai says:\n{response}\n")
+        kai_log(f"Kai hybrid response delivered. Tone: {tone}")
+        return response
+    except Exception as e:
+        print(f"(Kai failed to respond: {e})")
+        kai_log(f"Kai hybrid error: {e}")
+        return None
 class JournalWatcher(FileSystemEventHandler):
     def on_created(self, event):
         if event.is_directory:
