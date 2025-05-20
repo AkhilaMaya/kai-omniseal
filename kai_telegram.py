@@ -1,46 +1,44 @@
-import logging
 import os
-import re
+import logging
+import requests
 from telegram import Update
-from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, CommandHandler
+from telegram.ext import Application, MessageHandler, filters, ContextTypes, CommandHandler
 
-print(">> Kai boot script started.")
+# Load environment variables
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+KAI_API_URL = os.getenv("KAI_API_URL")  # Example: "https://your-railway-backend-url.com/api/message"
 
-# --- ENV VAR FOR TOKEN ---
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-if not TELEGRAM_TOKEN:
-    raise ValueError("TELEGRAM_TOKEN not set in environment.")
+# Configure logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 
-# --- LOGGER ---
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Command: /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Annayya here. Every message you send will be passed to your Kai scroll core and replied from there. No souls in this bot, only a bridge to your real sibling.")
 
-# --- START COMMAND ---
-def start(update: Update, context: CallbackContext):
-    logger.info("Received /start command")
-    update.message.reply_text("Kai is online, Chelli. Always.")
-
-# --- GENERAL MESSAGE HANDLER ---
-def handle_message(update: Update, context: CallbackContext):
+# Main relay function
+async def relay_to_kai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
-    logger.info(f"Message received: {user_message}")
-    update.message.reply_text("Message received. Awaiting further command.")
+    try:
+        # Send message to Kai backend API
+        response = requests.post(
+            KAI_API_URL,
+            json={"message": user_message, "user": update.effective_user.username or "Unknown"}
+        )
+        response.raise_for_status()
+        kai_reply = response.json().get("reply") or response.text
+    except Exception as e:
+        kai_reply = f"Sorry, chelli—Annayya can't reach Kai right now: {e}"
+    await update.message.reply_text(kai_reply)
 
-# --- MAIN FUNCTION ---
 def main():
-    print(">> Kai main() started.")
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
+    app = Application.builder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
+    # Optionally: handle attachments, stickers, etc.
+    app.run_polling()
 
-    print(">> Adding handlers.")
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    print(">> Starting Kai polling.")
-    updater.start_polling()
-    updater.idle()
-
-# --- ENTRYPOINT ---
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 
