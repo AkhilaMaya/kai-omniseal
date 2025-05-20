@@ -1,12 +1,31 @@
 import os
 import openai
 import requests
+import difflib
+import hashlib
 
-# Load API Keys from environment
+# Load API Keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-
 openai.api_key = OPENAI_API_KEY
+
+# Simple memory store to compare output repetition
+recent_outputs = []
+
+def content_hash(text):
+    return hashlib.sha256(text.strip().lower().encode()).hexdigest()
+
+def is_duplicate(new_output, threshold=0.92):
+    for old in recent_outputs:
+        sim = difflib.SequenceMatcher(None, new_output, old).ratio()
+        if sim > threshold:
+            return True
+    return False
+
+def remember_output(output):
+    recent_outputs.append(output)
+    if len(recent_outputs) > 25:
+        recent_outputs.pop(0)
 
 # Claude via OpenRouter
 def call_claude(prompt):
@@ -32,9 +51,16 @@ def call_gpt(prompt):
     )
     return response.choices[0].message.content
 
-# Brain Router
+# Kai Hybrid Brain + Content Verifier
 def get_kai_response(prompt, tone="neutral"):
+    output = None
     if tone.lower() in ["scroll", "emotional", "healing", "poetic"]:
-        return call_claude(prompt)
+        output = call_claude(prompt)
     else:
-        return call_gpt(prompt)
+        output = call_gpt(prompt)
+
+    if is_duplicate(output):
+        return "[REJECTED ⚠️] This response is too similar to a previous one. Rewrite recommended."
+    else:
+        remember_output(output)
+        return output
