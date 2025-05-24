@@ -44,7 +44,7 @@ def create_http_session() -> requests.Session:
     retry_strategy = Retry(
         total=MAX_RETRIES,
         status_forcelist=[429, 500, 502, 503, 504],
-        method_whitelist=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
+        allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
         backoff_factor=BACKOFF_FACTOR
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
