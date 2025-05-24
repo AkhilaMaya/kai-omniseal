@@ -1,6 +1,6 @@
 flask
 requests
-python-telegram-bot
+python-telegram-bot[webhooks]
 psutil
 watchdog
 anthropic
