@@ -118,12 +118,12 @@ def main():
     # Start webhook instead of polling
     webhook_url = os.getenv("WEBHOOK_URL")  # e.g., https://kai-omniseal-production.up.railway.app/kai-webhook
     app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 8080)),
-        webhook_url=webhook_url,
-        allowed_updates=Update.ALL_TYPES,
-        path="/kai-webhook"
-    )
+    listen="0.0.0.0",
+    port=int(os.environ.get("PORT", 8080)),
+    webhook_url=webhook_url,
+    allowed_updates=Update.ALL_TYPES
+)
+
 
 
 if __name__ == "__main__":
