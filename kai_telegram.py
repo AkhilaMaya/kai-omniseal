@@ -120,8 +120,9 @@ def main():
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8080)),
         webhook_url=webhook_url,
-        allowed_updates=["message", "edited_message", "channel_post", "callback_query"]
-    )
+       allowed_updates=["message", "edited_message", "channel_post", "callback_query"],
+url_path="kai-webhook"
+
 
 
 
