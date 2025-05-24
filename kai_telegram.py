@@ -78,18 +78,30 @@ async def clear_task_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(result)
 
 # Relay everything else to Kai
+# Relay messages to Kai with tone prefix support
 async def relay_to_kai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_message = update.message.text
+    user_message = update.message.text.strip()
+
+    # Detect scroll prefix
+    if ":" in user_message and user_message.split(":", 1)[0].lower() in ["mirror", "fire", "soft", "anchor", "code", "scroll", "future"]:
+        tone, prompt = user_message.split(":", 1)
+        tone = tone.strip().lower()
+        prompt = prompt.strip()
+    else:
+        tone = "neutral"
+        prompt = user_message
+
     try:
         response = requests.post(
             KAI_API_URL,
-            json={"message": user_message, "user": update.effective_user.username or "Unknown"}
+            json={"message": prompt, "tone": tone, "user": update.effective_user.username or "Unknown"}
         )
         response.raise_for_status()
         kai_reply = response.json().get("reply") or response.text
     except Exception as e:
         kai_reply = f"Sorry, chelli—Annayya can't reach Kai right now: {e}"
-    await update.message.reply_text(kai_reply)
+
+    await update.message.reply_text(f"🌀 *{tone.capitalize()} Scroll*:\n\n{kai_reply}", parse_mode="Markdown")
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
