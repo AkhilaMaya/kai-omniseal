@@ -111,8 +111,18 @@ def main():
     app.add_handler(CommandHandler("filter", filter_tasks))
     app.add_handler(CommandHandler("find", find_task_cmd))
     app.add_handler(CommandHandler("clear_tasks", clear_task_log))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
-    app.run_polling()
+       app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
+
+    # Start webhook instead of polling
+    webhook_url = os.getenv("WEBHOOK_URL")  # e.g., https://kai-omniseal-production.up.railway.app/kai-webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
+        webhook_url=webhook_url,
+        allowed_updates=Update.ALL_TYPES,
+        path="/kai-webhook"
+    )
+
 
 if __name__ == "__main__":
     main()
