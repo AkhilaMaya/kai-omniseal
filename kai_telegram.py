@@ -10,6 +10,7 @@ from task_engine import log_task, get_tasks, get_tasks_by_status, find_tasks, cl
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 KAI_API_URL = os.getenv("KAI_API_URL")  # Example: https://your-backend-url.up.railway.app/api/message
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -77,12 +78,10 @@ async def clear_task_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = clear_tasks()
     await update.message.reply_text(result)
 
-# Relay everything else to Kai
 # Relay messages to Kai with tone prefix support
 async def relay_to_kai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text.strip()
 
-    # Detect scroll prefix
     if ":" in user_message and user_message.split(":", 1)[0].lower() in ["mirror", "fire", "soft", "anchor", "code", "scroll", "future"]:
         tone, prompt = user_message.split(":", 1)
         tone = tone.strip().lower()
@@ -112,21 +111,14 @@ def main():
     app.add_handler(CommandHandler("find", find_task_cmd))
     app.add_handler(CommandHandler("clear_tasks", clear_task_log))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
-    
 
-
-    # Start webhook instead of polling
-       app.run_webhook(
+    app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8080)),
-        webhook_url=webhook_url,
+        webhook_url=WEBHOOK_URL,
         allowed_updates=["message", "edited_message", "channel_post", "callback_query"],
         url_path="kai-webhook"
     )
-
-
-
-
 
 if __name__ == "__main__":
     main()
