@@ -111,7 +111,7 @@ def main():
     app.add_handler(CommandHandler("filter", filter_tasks))
     app.add_handler(CommandHandler("find", find_task_cmd))
     app.add_handler(CommandHandler("clear_tasks", clear_task_log))
-         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, relay_to_kai))
 
 
     # Start webhook instead of polling
