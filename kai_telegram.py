@@ -116,12 +116,14 @@ def main():
 
 
     # Start webhook instead of polling
-    app.run_webhook(
+       app.run_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8080)),
         webhook_url=webhook_url,
-       allowed_updates=["message", "edited_message", "channel_post", "callback_query"],
-url_path="kai-webhook"
+        allowed_updates=["message", "edited_message", "channel_post", "callback_query"],
+        url_path="kai-webhook"
+    )
+
 
 
 
