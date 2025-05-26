@@ -1,13 +1,377 @@
-_pycache_/
-*.pyc
-*.pyo
-*.pyd
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#Pipfile.lock
+
+# Poetry
+#poetry.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# Railway
+.railway/
+
+# Docker
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore.local
+*.dockerfile
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.yarn-integrity
+
+# Modern Frontend Frameworks
+.next/
+out/
+build/
+public/static/
+.nuxt/
+.vuepress/dist/
+.serverless/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Application specific logs and data
 *.log
 *.session
 *.session-journal
-env/
-venv/
+kai_system_log.txt
+kai_production.log
+kai_flask.log
+kai_telegram.log
+kai_output_memory.json
+task_log.jsonl
+task_log.txt
+
+# API Keys and sensitive data
+.env.local
+.env.production
+.env.development
+.env.staging
+secrets.json
+config.json
+soul_signature.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Custom environment modules (your specific paths)
 modules/eshyel_clean_env/
 modules/eshyel_env/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# Runtime files
+*.pid
+*.sock
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.cer
+
+# Local development overrides
+local_config.py
+dev_settings.py
+
+# Build artifacts
+build/
+dist/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# JetBrains IDEs
 .idea/
-.DS_Store
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Media files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.svg
+*.mp4
+*.mov
+*.avi
+*.mp3
+*.wav
+*.ogg
+*.webp
+*.webm
+*.flv
+*.wmv
+
+# Data Science / ML artifacts
+*.h5
+*.pth
+*.pt
+*.pb
+*.ckpt
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.joblib
+models/
+checkpoints/
+data/raw/
+data/processed/
+*.csv
+*.tsv
+*.xlsx
+*.xls
+
+# Terraform / Infra as Code
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes
+*.kubeconfig
+kustomization.yaml.bak
+
+# Monitoring and profiling
+*.prof
+*.trace
+*.mem
+
+# Documentation builds
+_build/
+_site/
+site/
+
+# Test artifacts
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Security scanning
+.bandit
+.safety
+
+# Performance profiling
+*.cprof
+*.pstats
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.dmg
+*.iso
+
+# Temporary editor files
+.#*
+*#
+.*.swp
+.*.swo
+Session.vim
+.vimrc.local
+
+# Random development artifacts
+TODO.txt
+NOTES.txt
+scratch/
+experiments/
+playground/
