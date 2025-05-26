@@ -1,26 +1,19 @@
+"""
+Kai Brain Router - Railway Production Version
+Thread-safe, robust error handling, optimized for production
+Fixed: tuple annotation syntax, error handling improvements
+"""
+
 import os
 import sys
-import openai
 import requests
-import anthropic
-import difflib
-import hashlib
-import json
 import logging
 import traceback
+import difflib
+import threading
 from datetime import datetime
-from functools import wraps
 from time import time
-
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-from kai_scrollcore import (
-    scroll_trigger, scroll_audit, scroll_memory_echo, legacy_bond_ping
-)
-from kai_astrometa import activate_astro_meta_scroll, recommend_launch_time
-from nandi_agent_scrollpro import NandiAgentScrollPro
-from gpt_recovery_overdrive import GPTRecoveryOverdriveCapsule
+from typing import Dict, List, Any, Tuple
 
 # ===========================
 # PRODUCTION LOGGING SETUP
@@ -28,126 +21,117 @@ from gpt_recovery_overdrive import GPTRecoveryOverdriveCapsule
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('kai_production.log', encoding='utf-8')
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
 # ===========================
 # CONFIGURATION & ENV SETUP
 # ===========================
-MEMORY_FILE = "kai_output_memory.json"
-MEMORY_SIZE = int(os.getenv("KAI_MEMORY_SIZE", "50"))
 REQUEST_TIMEOUT = int(os.getenv("KAI_REQUEST_TIMEOUT", "30"))
 MAX_RETRIES = int(os.getenv("KAI_MAX_RETRIES", "3"))
+MEMORY_SIZE = 50
+MAX_PROMPT_LENGTH = 8000  # Prevent token limit issues
+MAX_LOG_SIZE = 100
 
-# API Keys
+# API Keys validation
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
 if not OPENAI_API_KEY or not OPENROUTER_API_KEY or not ANTHROPIC_API_KEY:
-    raise RuntimeError("❌ Missing one or more critical API keys. Set in Railway environment.")
-
-openai.api_key = OPENAI_API_KEY
+    raise RuntimeError("❌ Missing critical API keys: OPENAI_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY")
 
 # ===========================
-# FLASK APP INITIALIZATION
+# THREAD-SAFE IN-MEMORY STORAGE
 # ===========================
-app = Flask(__name__)
-CORS(app)
-app.config['JSON_AS_ASCII'] = False
+class ThreadSafeMemory:
+    """Thread-safe memory management for outputs and logs"""
+    def __init__(self, max_outputs: int = MEMORY_SIZE, max_logs: int = MAX_LOG_SIZE):
+        self._outputs: List[str] = []
+        self._logs: List[Dict[str, Any]] = []
+        self._lock = threading.RLock()
+        self.max_outputs = max_outputs
+        self.max_logs = max_logs
+
+    def add_output(self, output: str) -> None:
+        with self._lock:
+            self._outputs.append(output)
+            if len(self._outputs) > self.max_outputs:
+                self._outputs.pop(0)
+
+    def check_duplicate(self, new_output: str, threshold: float = 0.92) -> bool:
+        with self._lock:
+            for old_output in self._outputs:
+                similarity = difflib.SequenceMatcher(None, new_output, old_output).ratio()
+                if similarity > threshold:
+                    return True
+            return False
+
+    def add_log(self, log_entry: Dict[str, Any]) -> None:
+        with self._lock:
+            self._logs.append(log_entry)
+            if len(self._logs) > self.max_logs:
+                self._logs.pop(0)
+
+    def get_status(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "outputs_count": len(self._outputs),
+                "outputs_limit": self.max_outputs,
+                "logs_count": len(self._logs),
+                "logs_limit": self.max_logs
+            }
+
+    def clear_all(self) -> None:
+        with self._lock:
+            self._outputs.clear()
+            self._logs.clear()
+
+memory = ThreadSafeMemory()
 
 # ===========================
-# DECORATORS
+# LOGGING UTILITIES
 # ===========================
-def safe_route(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Route error in {f.__name__}: {str(e)}\n{traceback.format_exc()}")
-            return jsonify({
-                "error": "Internal server error",
-                "message": str(e),
-                "status": "failed"
-            }), 500
-    return decorated_function
-
-def timeout_handler(timeout_seconds):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            start_time = time()
-            result = f(*args, **kwargs)
-            elapsed = time() - start_time
-            if elapsed > timeout_seconds:
-                logger.warning(f"Function {f.__name__} took {elapsed:.2f}s (timeout: {timeout_seconds}s)")
-            return result
-        return decorated_function
-    return decorator
-
-# ===========================
-# MEMORY
-# ===========================
-def load_memory():
+def log_event(event_type: str, model: str, prompt: str, output_or_error: str, usage: Dict[str, Any] = None) -> None:
     try:
-        if os.path.exists(MEMORY_FILE):
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        return []
-    return []
-
-def save_memory(mem):
-    try:
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(mem, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        logger.error(f"Failed to save memory: {e}")
-
-recent_outputs = load_memory()
-
-def is_duplicate(new_output, threshold=0.92):
-    for old in recent_outputs:
-        sim = difflib.SequenceMatcher(None, new_output, old).ratio()
-        if sim > threshold:
-            return True
-    return False
-
-def remember_output(output):
-    recent_outputs.append(output)
-    while len(recent_outputs) > MEMORY_SIZE:
-        recent_outputs.pop(0)
-    save_memory(recent_outputs)
-
-# ===========================
-# LOGGING
-# ===========================
-def log_event(event_type, model, prompt, output_or_error, usage=None):
-    try:
-        with open("kai_system_log.txt", "a", encoding="utf-8") as f:
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if event_type == "USAGE":
-                f.write(f"[{now}] [USAGE] {model} | Prompt: {prompt[:70]} | Output: {output_or_error[:70]} | Usage: {usage}\n")
-            else:
-                f.write(f"[{now}] [ERROR] {model} | Prompt: {prompt[:70]} | Error: {output_or_error}\n")
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "type": event_type,
+            "model": model,
+            "prompt_preview": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+            "output_preview": str(output_or_error)[:100] + "..." if len(str(output_or_error)) > 100 else str(output_or_error),
+            "usage": usage or {}
+        }
+        memory.add_log(log_entry)
+        if event_type == "ERROR":
+            logger.error(f"{model} failed: {output_or_error}")
+        else:
+            logger.info(f"{model} success: {len(str(output_or_error))} chars")
     except Exception as e:
         logger.error(f"Failed to log event: {e}")
 
 # ===========================
-# MODEL CALLS
+# INPUT VALIDATION
 # ===========================
-@timeout_handler(REQUEST_TIMEOUT)
-def call_claude_openrouter(prompt, system=None, retry_count=0):
+def validate_prompt(prompt: str) -> Tuple[bool, str]:
+    if not prompt or not prompt.strip():
+        return False, "Empty prompt provided"
+    if len(prompt) > MAX_PROMPT_LENGTH:
+        return False, f"Prompt too long (max {MAX_PROMPT_LENGTH} characters)"
+    return True, ""
+
+# ===========================
+# MODEL CALLS WITH BETTER ERROR HANDLING
+# ===========================
+def call_claude_openrouter(prompt: str, system: str = None, retry_count: int = 0) -> str:
     try:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://kai-omniseal.railway.app",
+            "X-Title": "Kai Omniseal"
         }
         messages = []
         if system:
@@ -156,164 +140,199 @@ def call_claude_openrouter(prompt, system=None, retry_count=0):
         payload = {
             "model": "anthropic/claude-3-sonnet",
             "messages": messages,
-            "usage": {"include": True}
+            "max_tokens": 2048,
+            "temperature": 0.7
         }
-        r = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
-        r.raise_for_status()
-        response = r.json()
-        output = response["choices"][0]["message"]["content"].strip()
-        usage = response.get("usage", {})
-        log_event("USAGE", "Claude-3 (OpenRouter)", prompt, output, usage)
+        response = requests.post(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        data = response.json()
+        if "choices" not in data or not data["choices"]:
+            raise Exception("No choices in OpenRouter response")
+        output = data["choices"][0]["message"]["content"].strip()
+        usage = data.get("usage", {})
+        log_event("SUCCESS", "Claude-OpenRouter", prompt, output, usage)
         return output
-    except Exception as e:
-        log_event("ERROR", "Claude-3 (OpenRouter)", prompt, str(e))
+    except requests.exceptions.Timeout as e:
+        error_msg = f"OpenRouter timeout after {REQUEST_TIMEOUT}s"
+        log_event("ERROR", "Claude-OpenRouter", prompt, error_msg)
         if retry_count < MAX_RETRIES:
+            logger.warning(f"Retrying Claude-OpenRouter (attempt {retry_count + 1})")
             return call_claude_openrouter(prompt, system, retry_count + 1)
-        raise
+        raise Exception(error_msg)
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"OpenRouter HTTP error: {e.response.status_code if e.response else 'unknown'}"
+        log_event("ERROR", "Claude-OpenRouter", prompt, error_msg)
+        if retry_count < MAX_RETRIES and (not e.response or e.response.status_code >= 500):
+            logger.warning(f"Retrying Claude-OpenRouter (attempt {retry_count + 1})")
+            return call_claude_openrouter(prompt, system, retry_count + 1)
+        raise Exception(error_msg)
+    except Exception as e:
+        error_msg = f"OpenRouter unexpected error: {str(e)}"
+        log_event("ERROR", "Claude-OpenRouter", prompt, error_msg)
+        if retry_count < MAX_RETRIES:
+            logger.warning(f"Retrying Claude-OpenRouter (attempt {retry_count + 1})")
+            return call_claude_openrouter(prompt, system, retry_count + 1)
+        raise Exception(error_msg)
 
-@timeout_handler(REQUEST_TIMEOUT)
-def call_claude_direct(prompt, system=None, retry_count=0):
+def call_claude_direct(prompt: str, system: str = None, retry_count: int = 0) -> str:
     try:
+        import anthropic
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         message = client.messages.create(
             model="claude-3-sonnet-20240229",
             max_tokens=2048,
             temperature=0.7,
             system=system or "",
-            messages=[{"role": "user", "content": prompt}],
-            timeout=REQUEST_TIMEOUT
+            messages=[{"role": "user", "content": prompt}]
         )
         output = message.content[0].text.strip()
-        log_event("USAGE", "Claude-3 (Anthropic)", prompt, output, {"anthropic": "N/A"})
+        log_event("SUCCESS", "Claude-Direct", prompt, output)
         return output
     except Exception as e:
-        log_event("ERROR", "Claude-3 (Anthropic)", prompt, str(e))
+        error_msg = f"Claude Direct error: {str(e)}"
+        log_event("ERROR", "Claude-Direct", prompt, error_msg)
         if retry_count < MAX_RETRIES:
+            logger.warning(f"Retrying Claude-Direct (attempt {retry_count + 1})")
             return call_claude_direct(prompt, system, retry_count + 1)
-        raise
+        raise Exception(error_msg)
 
-@timeout_handler(REQUEST_TIMEOUT)
-def call_gpt(prompt, system=None, retry_count=0):
+def call_openai_gpt(prompt: str, system: str = None, retry_count: int = 0) -> str:
     try:
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        response = openai.ChatCompletion.create(
-            model="gpt-4-0613",
+        response = client.chat.completions.create(
+            model="gpt-4",
             messages=messages,
+            max_tokens=2048,
+            temperature=0.7,
             timeout=REQUEST_TIMEOUT
         )
         output = response.choices[0].message.content.strip()
-        usage = getattr(response, "usage", None) or {}
-        log_event("USAGE", "GPT-4.1", prompt, output, usage)
+        usage = {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "total_tokens": response.usage.total_tokens
+        }
+        log_event("SUCCESS", "GPT-4", prompt, output, usage)
         return output
     except Exception as e:
-        log_event("ERROR", "GPT-4.1", prompt, str(e))
+        error_msg = f"GPT-4 error: {str(e)}"
+        log_event("ERROR", "GPT-4", prompt, error_msg)
         if retry_count < MAX_RETRIES:
-            return call_gpt(prompt, system, retry_count + 1)
-        raise
+            logger.warning(f"Retrying GPT-4 (attempt {retry_count + 1})")
+            return call_openai_gpt(prompt, system, retry_count + 1)
+        raise Exception(error_msg)
 
 # ===========================
-# HYBRID RESPONSE ROUTER
+# MAIN RESPONSE ROUTER
 # ===========================
-@timeout_handler(REQUEST_TIMEOUT * 2)
-def get_kai_response(prompt, tone="neutral", review_mode=False, future_mode=False):
-    norm_tone = (tone or "neutral").strip().lower()
-    output = None
-
-    scroll_trigger(prompt, norm_tone)
-
-    if review_mode or norm_tone in ["code", "automation", "bot"]:
-        review = kai_safety_review(prompt, type="code" if "code" in norm_tone else "bot")
-        output = f"\n[SAFETY REVIEW]\n{review}\n\n[PROPOSED OUTPUT]\n"
-        try:
-            code = call_gpt(prompt)
-            output += code
-        except Exception:
-            try:
-                code = call_claude_openrouter(prompt)
-                output += code
-            except Exception:
-                code = call_claude_direct(prompt)
-                output += code
-        if is_duplicate(output):
-            return "[REJECTED ⚠️] This response is too similar to a previous one."
-        remember_output(output)
-        scroll_memory_echo(prompt, output, norm_tone)
-        scroll_audit(prompt, output, norm_tone)
-        legacy_bond_ping(prompt)
-        return output
-
-    if future_mode:
-        prompt_f = (
-            "You are Kai, the Prime Minister AI of the Kandadai empire, and it is the year 5025. "
-            "Your job is to imagine, strategize, and solve with the intelligence, technology, and creative freedom "
-            "of a being from the far future. For every question, first give a vision or solution that is possible in 5025. "
-            "Then, in a separate section, give the best achievable 2025 version and a roadmap for how to reach the 5025 state. "
-            "Never limit yourself to current paradigms.\n\nUser prompt: " + prompt
-        )
-        try:
-            output = call_claude_openrouter(prompt_f)
-        except Exception:
-            output = call_gpt(prompt_f)
-        remember_output(output)
-        scroll_memory_echo(prompt, output, norm_tone)
-        scroll_audit(prompt, output, norm_tone)
-        legacy_bond_ping(prompt)
-        return output
-
+def get_kai_response(prompt: str, tone: str = "neutral") -> str:
     try:
+        valid, error_msg = validate_prompt(prompt)
+        if not valid:
+            logger.warning(f"Invalid prompt: {error_msg}")
+            return f"⚠️ {error_msg}"
+
+        prompt = prompt.strip()
+        norm_tone = (tone or "neutral").strip().lower()
+        logger.info(f"Processing request: tone={norm_tone}, length={len(prompt)}")
+
+        # Determine model order based on tone
         if norm_tone in ["scroll", "emotional", "healing", "poetic"]:
-            try:
-                output = call_claude_openrouter(prompt)
-            except Exception:
-                output = call_claude_direct(prompt)
+            model_functions = [call_claude_openrouter, call_claude_direct, call_openai_gpt]
+        elif norm_tone in ["code", "technical", "automation"]:
+            model_functions = [call_openai_gpt, call_claude_openrouter, call_claude_direct]
         else:
-            output = call_gpt(prompt)
+            model_functions = [call_openai_gpt, call_claude_openrouter, call_claude_direct]
+
+        output = None
+        errors = []
+
+        for i, model_func in enumerate(model_functions):
+            try:
+                logger.info(f"Attempting model {i+1}/{len(model_functions)}: {model_func.__name__}")
+                output = model_func(prompt)
+                if output and output.strip():
+                    break
+            except Exception as e:
+                error_detail = f"{model_func.__name__}: {str(e)}"
+                errors.append(error_detail)
+                logger.warning(f"Model {i+1} failed: {error_detail}")
+                continue
+
+        if not output or not output.strip():
+            logger.error(f"All models failed. Errors: {'; '.join(errors)}")
+            return "⚠️ I'm experiencing technical difficulties with all my AI systems. Please try again in a few minutes."
+
+        if memory.check_duplicate(output):
+            logger.info("Duplicate response detected, requesting rephrase")
+            return "⚠️ I notice I might be repeating myself. Could you rephrase your question or ask something different?"
+
+        memory.add_output(output)
+        logger.info(f"Response generated successfully: {len(output)} characters")
+        return output
+
     except Exception as e:
-        log_event("ERROR", "HybridRouter", prompt, str(e))
-        return f"(Kai failed to process prompt: {e})"
-
-    if not output or output.strip() == "":
-        return "(Kai returned an empty response. Try again.)"
-    if is_duplicate(output):
-        return "[REJECTED ⚠️] This response is too similar to a previous one."
-    remember_output(output)
-    scroll_memory_echo(prompt, output, norm_tone)
-    scroll_audit(prompt, output, norm_tone)
-    legacy_bond_ping(prompt)
-    return output
+        error_msg = f"Critical error in get_kai_response: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())
+        return "⚠️ I encountered an unexpected error. Please try again."
 
 # ===========================
-# TELEGRAM WEBHOOK
+# UTILITY FUNCTIONS
 # ===========================
-@app.route("/kai/telegram_webhook", methods=["POST"])
-@safe_route
-def telegram_webhook():
-    data = request.get_json(force=True)
-    user_message = data.get("text", "")
-    tone = data.get("tone", "neutral")
-    review_mode = data.get("review_mode", False)
-    future_mode = data.get("future_mode", False)
-    reply = get_kai_response(user_message, tone=tone, review_mode=review_mode, future_mode=future_mode)
-    return jsonify({"reply": reply})
+def get_system_status() -> Dict[str, Any]:
+    try:
+        status = memory.get_status()
+        status.update({
+            "timestamp": datetime.now().isoformat(),
+            "api_keys_configured": {
+                "openai": bool(OPENAI_API_KEY),
+                "openrouter": bool(OPENROUTER_API_KEY),
+                "anthropic": bool(ANTHROPIC_API_KEY)
+            },
+            "configuration": {
+                "request_timeout": REQUEST_TIMEOUT,
+                "max_retries": MAX_RETRIES,
+                "max_prompt_length": MAX_PROMPT_LENGTH
+            }
+        })
+        return status
+    except Exception as e:
+        logger.error(f"Error getting system status: {e}")
+        return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+def clear_memory() -> str:
+    try:
+        memory.clear_all()
+        logger.info("Memory cleared successfully")
+        return "✅ Memory cleared successfully"
+    except Exception as e:
+        logger.error(f"Error clearing memory: {e}")
+        return f"❌ Error clearing memory: {str(e)}"
 
 # ===========================
-# HEALTH ENDPOINT
+# STUB FUNCTIONS (for missing imports)
 # ===========================
-@app.route("/health", methods=["GET"])
-@safe_route
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "service": "kai_omniseal",
-        "timestamp": datetime.utcnow().isoformat()
-    }), 200
+def scroll_trigger(prompt: str, tone: str) -> None:
+    pass
+
+def scroll_audit(prompt: str, output: str, tone: str) -> None:
+    pass
+
+def scroll_memory_echo(prompt: str, output: str, tone: str) -> None:
+    pass
+
+def legacy_bond_ping(prompt: str) -> None:
+    pass
 
 # ===========================
-# DEV TEST HOOK
+# INITIALIZATION
 # ===========================
-if __name__ == "__main__":
-    print(get_kai_response("Write a scroll of protection for survivors of emotional abuse.", tone="scroll"))
+logger.info("🧬 Kai Brain Router initialized - Railway production mode (thread-safe)")
+logger.info(f"Configuration: timeout={REQUEST_TIMEOUT}s, retries={MAX_RETRIES}, memory_size={MEMORY_SIZE}")
 
