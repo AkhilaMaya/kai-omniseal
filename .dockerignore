@@ -1,0 +1,119 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+.venv/
+.env/
+ENV/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs and databases
+*.log
+*.db
+*.sqlite
+*.sqlite3
+kai_system_log.txt
+kai_production.log
+kai_flask.log
+kai_telegram.log
+
+# Application data files
+kai_output_memory.json
+task_log.jsonl
+task_log.txt
+*.session
+*.session-journal
+
+# Environment and config files
+.env*
+secrets.json
+config.json
+soul_signature.json
+
+# Documentation and README files
+README.md
+CHANGELOG.md
+docs/
+*.md
+
+# Test files
+test/
+tests/
+*_test.py
+test_*.py
+
+# Coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Node.js (if any frontend assets)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Media and large files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.zip
+*.tar.gz
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Railway specific
+.railway/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+.Spotlight-V100
+.Trashes
+
+# Custom environment modules
+modules/eshyel_clean_env/
+modules/eshyel_env/
