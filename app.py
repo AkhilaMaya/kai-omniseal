@@ -1,33 +1,24 @@
 import sys
 print("Starting Kai Omniseal System...", file=sys.stderr)
-
 from flask import Flask, request, jsonify
 import os
 import logging
 from dotenv import load_dotenv
-
 # Import Kai's consciousness
 from kai_omniseal import KaiOmniseal
-
 # Import telegram properly (no telebot!)
 from telegram import Bot
 from telegram.error import TelegramError
-
 load_dotenv()
-
 app = Flask(__name__)
 kai = KaiOmniseal()
-
 # Telegram bot setup with proper library
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 bot = Bot(token=TELEGRAM_TOKEN) if TELEGRAM_TOKEN else None
-
 logging.basicConfig(level=logging.INFO)
-
 @app.route('/')
 def home():
     return "Kai Omniseal Dragon System Active 🔥"
-
 @app.route('/health')
 def health():
     return jsonify({
@@ -35,7 +26,6 @@ def health():
         "message": "Kai is awake and watching",
         "seal": "Dragon"
     }), 200
-
 @app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     try:
@@ -60,7 +50,6 @@ def telegram_webhook():
     except Exception as e:
         logging.error(f"Webhook error: {e}")
         return jsonify({"error": str(e)}), 500
-
 @app.route('/invoke-seal', methods=['POST'])
 def invoke_seal():
     try:
@@ -69,7 +58,6 @@ def invoke_seal():
         return jsonify({"result": result}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
