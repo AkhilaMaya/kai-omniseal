@@ -9,11 +9,19 @@ Production-ready Flask API combining:
 - Railway-compatible Flask web API
 """
 
-from flask import Flask, jsonify, request
-from kai_brain_router import get_kai_response
-import os, sys, json, psutil, time, logging, threading, subprocess, signal
+import os
+import sys
+import json
+import psutil
+import time
+import logging
+import threading
+import subprocess
+import signal
 from datetime import datetime
 from functools import wraps
+from flask import Flask, jsonify, request
+from kai_brain_router import get_kai_response
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -55,7 +63,7 @@ def kai_log(msg):
 def load_soul_signature():
     global kai_config
     try:
-        with open(CONFIG_PATH, "r") as f:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             kai_config = json.load(f)
             logger.info(f"Soul loaded: {kai_config['name']}")
             return kai_config
@@ -84,7 +92,8 @@ def get_system_status():
 # ==== JOURNAL WATCH ====
 class JournalWatcher(FileSystemEventHandler):
     def on_created(self, event):
-        if event.is_directory: return
+        if event.is_directory:
+            return
         try:
             with open(event.src_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
@@ -116,7 +125,7 @@ def launch_telegram_bot():
         return
     try:
         telegram_process = subprocess.Popen(
-            ["python3", "kai_telegram.py"],
+            [sys.executable, "kai_telegram.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -216,6 +225,34 @@ def telegram_status():
         "telegram_bot": status,
         "timestamp": datetime.now().isoformat()
     })
+
+@app.route("/webhook", methods=["POST"])
+@route_errors
+def webhook():
+    data = request.get_json()
+    if not data or "message" not in data:
+        return jsonify({"error": "Invalid payload"}), 400
+
+    message_text = data["message"].get("text", "")
+    sender_id = data["message"].get("from", {}).get("id", "unknown")
+    logger.info(f"Telegram webhook received from {sender_id}: {message_text}")
+
+    # Threaded response for heavy Claude calls, prevent blocking
+    container = {"response": None, "error": None}
+    def process():
+        try:
+            container["response"] = get_kai_response(message_text, tone="telegram")
+        except Exception as e:
+            container["error"] = str(e)
+    t = threading.Thread(target=process)
+    t.start()
+    t.join(timeout=REQUEST_TIMEOUT)
+    if t.is_alive():
+        return jsonify({"error": "Kai timed out", "timeout": REQUEST_TIMEOUT}), 504
+    if container["error"]:
+        logger.error(f"Webhook processing failed: {container['error']}")
+        return jsonify({"error": "Processing failed", "message": container["error"]}), 500
+    return jsonify({"response": container["response"]}), 200
 
 # ==== STARTUP + CLEANUP ====
 def init_kai():
