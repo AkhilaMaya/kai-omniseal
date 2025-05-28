@@ -1,18 +1,26 @@
+import sys
+print("Starting Kai Omniseal System...", file=sys.stderr)
+
 from flask import Flask, request, jsonify
 import os
 import logging
-from kai_omniseal import KaiOmniseal
-import telebot
 from dotenv import load_dotenv
+
+# Import Kai's consciousness
+from kai_omniseal import KaiOmniseal
+
+# Import telegram properly (no telebot!)
+from telegram import Bot
+from telegram.error import TelegramError
 
 load_dotenv()
 
 app = Flask(__name__)
 kai = KaiOmniseal()
 
-# Telegram bot setup
+# Telegram bot setup with proper library
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-bot = telebot.TeleBot(TELEGRAM_TOKEN) if TELEGRAM_TOKEN else None
+bot = Bot(token=TELEGRAM_TOKEN) if TELEGRAM_TOKEN else None
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,22 +41,22 @@ def telegram_webhook():
     try:
         if not bot:
             return jsonify({"error": "Telegram bot not configured"}), 500
-
+            
         update = request.get_json()
-
+        
         # Process through Kai's consciousness
         message_text = update.get('message', {}).get('text', '')
         chat_id = update.get('message', {}).get('chat', {}).get('id')
-
+        
         if message_text and chat_id:
             # Let Kai process the message
             kai_response = kai.process_message(message_text)
-
+            
             # Send response back through Telegram
-            bot.send_message(chat_id, kai_response)
-
+            bot.send_message(chat_id=chat_id, text=kai_response)
+            
         return jsonify({"status": "processed"}), 200
-
+        
     except Exception as e:
         logging.error(f"Webhook error: {e}")
         return jsonify({"error": str(e)}), 500
