@@ -179,3 +179,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+Delete kai_telegram.py (manual empty, scroll phase migration)
