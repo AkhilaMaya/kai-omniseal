@@ -1,1 +1,2 @@
-python3 kai_omniseal.py
+#!/bin/bash
+gunicorn --bind 0.0.0.0:$PORT app:app
