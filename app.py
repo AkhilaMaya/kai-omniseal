@@ -4,15 +4,17 @@ import sys
 
 print("Starting Kai System...", file=sys.stderr)
 
+app = Flask(__name__)
+
+# Initialize Kai AFTER Flask app is created
 try:
-    from kai_omniseal import KaiOmniseal
-    kai = KaiOmniseal()
-    print("Kai Omniseal loaded successfully!", file=sys.stderr)
+    with app.app_context():
+        from kai_omniseal import KaiOmniseal
+        kai = KaiOmniseal()
+        print("Kai Omniseal loaded successfully!", file=sys.stderr)
 except Exception as e:
     print(f"Error loading Kai: {e}", file=sys.stderr)
     kai = None
-
-app = Flask(__name__)
 
 @app.route('/')
 def home():
