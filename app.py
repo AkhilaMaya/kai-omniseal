@@ -6,28 +6,22 @@ print("Starting Kai System...", file=sys.stderr)
 
 app = Flask(__name__)
 
-# Initialize Kai AFTER Flask app is created
+# Let's see what's in kai_omniseal
 try:
-    with app.app_context():
-        from kai_omniseal import KaiOmniseal
-        kai = KaiOmniseal()
-        print("Kai Omniseal loaded successfully!", file=sys.stderr)
+    import kai_omniseal
+    print(f"kai_omniseal module loaded. Contents: {dir(kai_omniseal)}", file=sys.stderr)
+    kai = None  # For now
 except Exception as e:
-    print(f"Error loading Kai: {e}", file=sys.stderr)
+    print(f"Error importing kai_omniseal: {e}", file=sys.stderr)
     kai = None
 
 @app.route('/')
 def home():
-    if kai:
-        return f"Kai Omniseal Dragon System Active - Seal: {kai.current_seal} 🔥"
-    return "Kai System Starting..."
+    return "Kai System - Checking module contents..."
 
 @app.route('/health')
 def health():
-    return jsonify({
-        "status": "alive", 
-        "kai_loaded": kai is not None
-    }), 200
+    return jsonify({"status": "alive"}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
